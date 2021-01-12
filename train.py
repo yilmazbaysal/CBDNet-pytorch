@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from datetime import datetime
 from utils import AverageMeter
 from dataset.loader import Real, Syn
 from model.cbdnet import Network, fixed_loss
@@ -67,14 +68,24 @@ if __name__ == '__main__':
 	criterion = fixed_loss()
 	criterion.cuda()
 
-	train_dataset = Real('./data/SIDD_train/', 320, args.ps) + Syn('./data/Syn_train/', 100, args.ps)
+	# train_dataset = Real('./data/SIDD_train/', 320, args.ps) + Syn('./data/Syn_train/', 100, args.ps)
+	# Load the dataset
+	train_dataset = Syn('./data/Syn_train/', 100, args.ps)
 	train_loader = torch.utils.data.DataLoader(
-		train_dataset, batch_size=args.bs, shuffle=True, num_workers=8, pin_memory=True, drop_last=True)
+		train_dataset,
+		batch_size=args.bs,
+		shuffle=True,
+		num_workers=8,
+		pin_memory=True,
+		drop_last=True
+	)
 
+	# Main training loop
 	for epoch in range(cur_epoch, args.epochs + 1):
 		loss = train(train_loader, model, criterion, optimizer)
 		scheduler.step()
 
+		# Save the model state
 		torch.save({
 			'epoch': epoch + 1,
 			'state_dict': model.state_dict(),
@@ -82,10 +93,9 @@ if __name__ == '__main__':
 			'scheduler' : scheduler.state_dict()}, 
 			os.path.join(save_dir, 'checkpoint.pth.tar'))
 
-		print('Epoch [{0}]\t'
-			'lr: {lr:.6f}\t'
-			'Loss: {loss:.5f}'
-			.format(
+		print('Epoch [{0}]\t lr: {lr:.6f}\t Loss: {loss:.5f}\t{time}'.format(
 			epoch,
 			lr=optimizer.param_groups[-1]['lr'],
-			loss=loss))
+			loss=loss,
+			time=datetime.now()
+		))
